@@ -5,6 +5,16 @@ ENV PYTHONUNBUFFERED 1
 
 RUN pip install imageio-ffmpeg==0.4.3 pyspng==0.1.0
 
+WORKDIR /workspace
+
+# Unset TORCH_CUDA_ARCH_LIST and exec.  This makes pytorch run-time
+# extension builds significantly faster as we only compile for the
+# currently active GPU configuration.
+RUN (printf '#!/bin/bash\nunset TORCH_CUDA_ARCH_LIST\nexec \"$@\"\n' >> /entry.sh) && chmod a+x /entry.sh
+
+
+FROM gcr.io/kaggle-gpu-images/python:v98
+
 RUN chsh -s /bin/bash
 ENV SHELL=/bin/bash
 RUN rm /bin/sh && ln -s /bin/bash /bin/sh
@@ -26,7 +36,7 @@ RUN apt-get update && apt-get install -y \
     gettext-base \
     less \
     && rm -rf /var/lib/apt/lists/*
-    
+
 # install nvm
 # https://github.com/creationix/nvm#install-script
 RUN curl --silent -o- https://raw.githubusercontent.com/creationix/nvm/v0.33.11/install.sh | bash
@@ -44,7 +54,7 @@ RUN source $NVM_DIR/nvm.sh \
 ENV NODE_PATH $NVM_DIR/versions/node/$NODE_VERSION/bin
 ENV PATH $NODE_PATH:$PATH
 
-
+RUN pip install pip==20.3.4
 RUN pip install jupyterlab==2.2.9 ipywidgets==7.6.3
 RUN jupyter labextension install @jupyter-widgets/jupyterlab-manager
 RUN jupyter nbextension enable --py widgetsnbextension #enable ipywidgets
@@ -56,10 +66,5 @@ ADD start.sh /
 
 WORKDIR /workspace
 RUN chown -R 42420:42420 /workspace
-
-# Unset TORCH_CUDA_ARCH_LIST and exec.  This makes pytorch run-time
-# extension builds significantly faster as we only compile for the
-# currently active GPU configuration.
-RUN (printf '#!/bin/bash\nunset TORCH_CUDA_ARCH_LIST\nexec \"$@\"\n' >> /entry.sh) && chmod a+x /entry.sh
 
 ENTRYPOINT ["/start.sh"]
