@@ -1,11 +1,3 @@
-# Copyright (c) 2021, NVIDIA CORPORATION.  All rights reserved.
-#
-# NVIDIA CORPORATION and its licensors retain all intellectual property
-# and proprietary rights in and to this software, related documentation
-# and any modifications thereto.  Any use, reproduction, disclosure or
-# distribution of this software and related documentation without an express
-# license agreement from NVIDIA CORPORATION is strictly prohibited.
-
 FROM nvcr.io/nvidia/pytorch:20.12-py3
 
 ENV PYTHONDONTWRITEBYTECODE 1
@@ -19,11 +11,23 @@ WORKDIR /workspace
 # extension builds significantly faster as we only compile for the
 # currently active GPU configuration.
 RUN (printf '#!/bin/bash\nunset TORCH_CUDA_ARCH_LIST\nexec \"$@\"\n' >> /entry.sh) && chmod a+x /entry.sh
-#ENTRYPOINT ["/entry.sh"]
-
-FROM mikebirdgeneau/jupyterlab
 
 # Expose Jupyter port & cmd
 EXPOSE 8888
 RUN mkdir -p /opt/app/data
-CMD jupyter lab --ip=* --port=8888 --no-browser --notebook-dir=/opt/app/data --allow-root
+FROM python:3.7
+
+WORKDIR /workspace
+RUN chown -R 42420:42420 /workspace
+
+
+RUN pip install jupyter -U && pip install jupyterlab
+EXPOSE 8888
+
+RUN set -eu
+CMD jupyter lab --ip=0.0.0.0 --port=8080 --no-browser --allow-root \
+--LabApp.token='' \
+  --LabApp.custom_display_url=${JOB_URL_SCHEME}${JOB_ID}.${JOB_HOST} \
+  --LabApp.allow_remote_access=True \
+  --LabApp.allow_origin='*' \
+  --LabApp.disable_check_xsrf=True
